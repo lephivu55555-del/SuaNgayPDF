@@ -50,11 +50,17 @@ DATE_PATTERN = re.compile(
 
 # ===== Helper Functions =====
 
-def pdf_page_to_image(doc, page_num=0, dpi=300):
+def pdf_page_to_image(doc, page_num=0, dpi=150, crop_top_ratio=0.35):
+    """Convert PDF page to image, optionally cropping to top portion for memory efficiency."""
     page = doc[page_num]
     mat = fitz.Matrix(dpi / 72, dpi / 72)
     pix = page.get_pixmap(matrix=mat)
-    return Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+    del pix  # Free memory immediately
+    if crop_top_ratio < 1.0:
+        crop_h = int(img.height * crop_top_ratio)
+        img = img.crop((0, 0, img.width, crop_h))
+    return img
 
 
 def ocr_find_date(image):
@@ -135,7 +141,7 @@ def ocr_find_date(image):
         if best_match:
             break
     
-    return best_match
+    return best_match, ocr_data
 
 
 def try_text_extraction(doc, page_num=0):
@@ -234,9 +240,9 @@ def api_preview():
                 "method": text_result['method'],
             })
         
-        # Fallback: OCR
-        ocr_img = pdf_page_to_image(doc, page_num=0, dpi=300)
-        ocr_result = ocr_find_date(ocr_img)
+        # Fallback: OCR (use lower DPI + crop for memory efficiency)
+        ocr_img = pdf_page_to_image(doc, page_num=0, dpi=150, crop_top_ratio=0.35)
+        ocr_result, _ = ocr_find_date(ocr_img)
         doc.close()
         
         if ocr_result:
@@ -318,12 +324,17 @@ def api_edit_date():
                     return jsonify({"success": True, "download_url": f"/download/{token}"})
         
         # ---- Method 2: OCR-based (scanned PDF) - Image-level editing ----
-        ocr_img = pdf_page_to_image(doc, page_num=0, dpi=300)
-        ocr_result = ocr_find_date(ocr_img)
+        # Step 1: OCR on cropped top portion (memory efficient)
+        ocr_crop = pdf_page_to_image(doc, page_num=0, dpi=150, crop_top_ratio=0.35)
+        ocr_result, ocr_data_full = ocr_find_date(ocr_crop)
+        del ocr_crop  # Free memory
         
         if not ocr_result:
             doc.close()
             return jsonify({"success": False, "error": "Không tìm thấy vị trí ngày tháng trong PDF!"})
+        
+        # Step 2: Render full page at 150 DPI for editing
+        ocr_img = pdf_page_to_image(doc, page_num=0, dpi=150, crop_top_ratio=1.0)
         
         # Edit directly on the image using PIL
         from PIL import ImageDraw, ImageFont, ImageFilter
@@ -367,10 +378,7 @@ def api_edit_date():
                 return tuple(np.array(light).mean(axis=0).astype(int))
             return (252, 252, 252)
         
-        # Re-run OCR data for color sampling
-        ocr_data_full = pytesseract.image_to_data(
-            ocr_img, lang=OCR_LANG, output_type=pytesseract.Output.DICT
-        )
+        # Reuse OCR data from ocr_find_date (no duplicate OCR call!)
         text_color = sample_text_color(ocr_img, ocr_result, ocr_data_full)
         bg_color = sample_bg_color(ocr_img, ocr_result['day_box'])
         
