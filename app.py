@@ -220,10 +220,11 @@ def api_preview():
         pdf_bytes = file.read()
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         
-        # Generate preview
-        preview_img = pdf_page_to_image(doc, page_num=0, dpi=150)
+        # Generate preview (full page at low DPI for display only)
+        preview_img = pdf_page_to_image(doc, page_num=0, dpi=100, crop_top_ratio=1.0)
         buf = io.BytesIO()
-        preview_img.save(buf, format='PNG', optimize=True)
+        preview_img.save(buf, format='JPEG', quality=60)
+        del preview_img  # Free memory
         buf.seek(0)
         preview_b64 = base64.b64encode(buf.read()).decode('utf-8')
         
