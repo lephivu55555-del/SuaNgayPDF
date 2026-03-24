@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sửa Ngày Tháng PDF</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --primary-glow: rgba(99, 102, 241, 0.3);
+            --accent: #a855f7;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --card-bg-alt: #1a2332;
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --text-muted: #64748b;
+            --border: #334155;
+            --input-bg: #0f172a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding: 2rem 1rem;
+        }
+        .blob { position: fixed; filter: blur(120px); border-radius: 50%; z-index: 0; opacity: 0.25; animation: blobFloat 8s ease-in-out infinite alternate; }
+        .blob-1 { width: 450px; height: 450px; top: -180px; left: -180px; background: linear-gradient(135deg, #6366f1, #a855f7); }
+        .blob-2 { width: 450px; height: 450px; bottom: -180px; right: -180px; background: linear-gradient(135deg, #a855f7, #ec4899); }
+        @keyframes blobFloat { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(30px, -20px) scale(1.05); } }
+
+        .container {
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.6);
+            width: 100%;
+            max-width: 480px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            position: relative;
+            z-index: 1;
+            transition: max-width 0.4s ease;
+        }
+        .container.expanded { max-width: 700px; }
+
+        .header { text-align: center; margin-bottom: 2rem; }
+        .header-icon { width: 56px; height: 56px; border-radius: 1rem; background: linear-gradient(135deg, var(--primary), var(--accent)); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 1.5rem; box-shadow: 0 8px 25px var(--primary-glow); }
+        h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.4rem; background: linear-gradient(135deg, #818cf8, #c084fc); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { font-size: 0.875rem; color: var(--text-dim); }
+
+        /* Drop zone */
+        .drop-zone { border: 2px dashed var(--border); border-radius: 1rem; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.3s ease; margin-bottom: 1.5rem; background: rgba(15, 23, 42, 0.4); }
+        .drop-zone:hover, .drop-zone.dragover { border-color: var(--primary); background: rgba(99, 102, 241, 0.05); }
+        .drop-zone.has-file { border-color: var(--success); background: rgba(16, 185, 129, 0.05); }
+        .drop-zone-icon { font-size: 2.5rem; margin-bottom: 0.75rem; display: block; }
+        .drop-zone-text { font-size: 0.9rem; color: var(--text-dim); line-height: 1.6; }
+        .drop-zone-text strong { color: var(--primary); }
+        .file-name { font-size: 0.85rem; color: var(--success); margin-top: 0.5rem; font-weight: 500; word-break: break-all; }
+        input[type="file"] { display: none; }
+
+        /* Preview */
+        .preview-section { display: none; margin-bottom: 1.5rem; animation: fadeIn 0.4s ease; }
+        .preview-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 0.5rem; }
+        .preview-img-wrapper { border: 1px solid var(--border); border-radius: 0.75rem; overflow: hidden; max-height: 300px; overflow-y: auto; }
+        .preview-img-wrapper img { width: 100%; display: block; }
+        .preview-img-wrapper::-webkit-scrollbar { width: 4px; }
+        .preview-img-wrapper::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+        /* Date preview */
+        .date-preview { background: var(--card-bg-alt); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: none; animation: fadeIn 0.3s ease; }
+        .date-preview-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 0.5rem; }
+        .date-preview-value { font-size: 1rem; color: var(--warning); font-weight: 600; }
+        .date-preview-method { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.35rem; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Date inputs */
+        .date-inputs-section { display: none; animation: fadeIn 0.3s ease; }
+        .date-inputs-title { font-size: 0.875rem; font-weight: 600; color: var(--text-dim); margin-bottom: 0.75rem; }
+        .date-inputs-row { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; }
+        .date-input-group { flex: 1; }
+        .date-input-group label { display: block; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+        .date-input-group input {
+            width: 100%; padding: 0.75rem 1rem; border-radius: 0.625rem;
+            border: 1px solid var(--border); background: var(--input-bg);
+            color: var(--text); font-family: inherit; font-size: 1.1rem;
+            font-weight: 600; text-align: center;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            -moz-appearance: textfield;
+        }
+        .date-input-group input::-webkit-outer-spin-button,
+        .date-input-group input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .date-input-group input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-glow); }
+
+        /* Buttons */
+        .btn { width: 100%; padding: 0.875rem; border: none; border-radius: 0.75rem; font-size: 1rem; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; box-shadow: 0 4px 15px var(--primary-glow); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px var(--primary-glow); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+        .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text-dim); margin-top: 0.5rem; }
+        .btn-secondary:hover { background: rgba(51, 65, 85, 0.5); color: var(--text); }
+
+        .spinner { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--danger); color: white; padding: 0.75rem 1.5rem; border-radius: 0.75rem; font-size: 0.875rem; font-weight: 500; z-index: 1000; opacity: 0; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3); max-width: 90%; text-align: center; }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        .success-state { text-align: center; padding: 1rem 0; display: none; animation: fadeIn 0.4s ease; }
+        .success-icon { font-size: 3rem; margin-bottom: 1rem; display: block; }
+        .success-text { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem; }
+        .success-sub { font-size: 0.85rem; color: var(--text-dim); }
+
+        .loading-overlay { display: none; text-align: center; padding: 2rem 0; }
+        .loading-text { color: var(--text-dim); font-size: 0.9rem; margin-top: 1rem; }
+
+        @media (max-width: 500px) {
+            .container { padding: 1.5rem; }
+            h1 { font-size: 1.4rem; }
+            .date-inputs-row { gap: 0.5rem; }
+            .date-input-group input { padding: 0.6rem 0.5rem; font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <div class="container" id="main-container">
+        <div class="header">
+            <div class="header-icon">📄</div>
+            <h1>Sửa Ngày Tháng PDF</h1>
+            <p class="subtitle">Upload file PDF và chỉnh sửa ngày tháng ở đầu văn bản</p>
+        </div>
+
+        <div id="upload-section">
+            <div class="drop-zone" id="drop-zone">
+                <span class="drop-zone-icon">📁</span>
+                <div class="drop-zone-text" id="drop-zone-text">
+                    <strong>Nhấn để chọn</strong> hoặc kéo thả file PDF vào đây
+                </div>
+                <div class="file-name" id="file-name" style="display:none;"></div>
+                <input type="file" id="pdf-file" accept=".pdf">
+            </div>
+
+            <!-- Loading -->
+            <div class="loading-overlay" id="loading">
+                <div class="spinner" style="width:32px;height:32px;border-width:3px;"></div>
+                <div class="loading-text">Đang phân tích PDF...</div>
+            </div>
+
+            <!-- Preview -->
+            <div class="preview-section" id="preview-section">
+                <div class="preview-label">👀 Xem trước trang đầu</div>
+                <div class="preview-img-wrapper">
+                    <img id="preview-img" src="" alt="Preview">
+                </div>
+            </div>
+
+            <!-- Date found -->
+            <div class="date-preview" id="date-preview">
+                <div class="date-preview-label">📌 Ngày tháng tìm thấy</div>
+                <div class="date-preview-value" id="original-date"></div>
+                <div class="date-preview-method" id="detection-method"></div>
+            </div>
+
+            <!-- Date inputs -->
+            <div class="date-inputs-section" id="date-inputs-section">
+                <div class="date-inputs-title">✏️ Nhập ngày tháng mới</div>
+                <div class="date-inputs-row">
+                    <div class="date-input-group">
+                        <label for="new-day">Ngày</label>
+                        <input type="number" id="new-day" min="1" max="31" placeholder="25">
+                    </div>
+                    <div class="date-input-group">
+                        <label for="new-month">Tháng</label>
+                        <input type="number" id="new-month" min="1" max="12" placeholder="01">
+                    </div>
+                    <div class="date-input-group">
+                        <label for="new-year">Năm</label>
+                        <input type="number" id="new-year" min="2000" max="2099" placeholder="2026">
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="btn-edit" onclick="editPdf()">✨ Sửa Ngày Tháng</button>
+            </div>
+        </div>
+
+        <div class="success-state" id="success-state">
+            <span class="success-icon">✅</span>
+            <div class="success-text">Sửa ngày tháng thành công!</div>
+            <div class="success-sub">File PDF đã được tải về máy</div>
+            <button class="btn btn-secondary" onclick="resetAll()" style="margin-top:1.5rem;">📄 Sửa file khác</button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('pdf-file');
+        const fileNameEl = document.getElementById('file-name');
+        const loading = document.getElementById('loading');
+        const previewSection = document.getElementById('preview-section');
+        const previewImg = document.getElementById('preview-img');
+        const datePreview = document.getElementById('date-preview');
+        const dateInputsSection = document.getElementById('date-inputs-section');
+        const btnEdit = document.getElementById('btn-edit');
+        const container = document.getElementById('main-container');
+
+        let selectedFile = null;
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0 && e.dataTransfer.files[0].name.toLowerCase().endsWith('.pdf')) {
+                handleFile(e.dataTransfer.files[0]);
+            } else {
+                showToast('Vui lòng chọn file PDF!');
+            }
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handleFile(e.target.files[0]);
+        });
+
+        async function handleFile(file) {
+            selectedFile = file;
+            fileNameEl.textContent = '📎 ' + file.name;
+            fileNameEl.style.display = 'block';
+            dropZone.classList.add('has-file');
+
+            // Show loading
+            loading.style.display = 'block';
+            previewSection.style.display = 'none';
+            datePreview.style.display = 'none';
+            dateInputsSection.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/preview', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                loading.style.display = 'none';
+
+                // Show preview
+                if (result.preview) {
+                    previewImg.src = 'data:image/png;base64,' + result.preview;
+                    previewSection.style.display = 'block';
+                    container.classList.add('expanded');
+                }
+
+                if (result.success) {
+                    // Date found
+                    document.getElementById('original-date').textContent =
+                        `ngày ${result.day} tháng ${result.month} năm ${result.year}`;
+                    document.getElementById('detection-method').textContent =
+                        result.method === 'ocr' ? 'Phát hiện bằng OCR' : 'Phát hiện từ text PDF';
+                    datePreview.style.display = 'block';
+
+                    document.getElementById('new-day').value = result.day;
+                    document.getElementById('new-month').value = result.month;
+                    document.getElementById('new-year').value = result.year;
+                    dateInputsSection.style.display = 'block';
+                } else if (result.manual_mode) {
+                    // Manual mode - let user enter values
+                    dateInputsSection.style.display = 'block';
+                    showToast(result.error);
+                } else {
+                    showToast(result.error || 'Lỗi không xác định');
+                }
+            } catch (e) {
+                loading.style.display = 'none';
+                showToast('Lỗi kết nối: ' + e.message);
+            }
+        }
+
+        async function editPdf() {
+            if (!selectedFile) { showToast('Vui lòng chọn file PDF!'); return; }
+
+            const newDay = document.getElementById('new-day').value;
+            const newMonth = document.getElementById('new-month').value;
+            const newYear = document.getElementById('new-year').value;
+
+            if (!newDay || !newMonth || !newYear) { showToast('Vui lòng nhập đầy đủ ngày, tháng, năm!'); return; }
+
+            const d = parseInt(newDay), m = parseInt(newMonth), y = parseInt(newYear);
+            if (d < 1 || d > 31) { showToast('Ngày phải từ 1 đến 31!'); return; }
+            if (m < 1 || m > 12) { showToast('Tháng phải từ 1 đến 12!'); return; }
+            if (y < 2000 || y > 2099) { showToast('Năm phải từ 2000 đến 2099!'); return; }
+
+            btnEdit.disabled = true;
+            btnEdit.innerHTML = '<div class="spinner"></div> Đang xử lý...';
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('new_day', newDay);
+            formData.append('new_month', newMonth);
+            formData.append('new_year', newYear);
+
+            try {
+                const response = await fetch('/api/edit-date', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                if (result.success && result.download_url) {
+                    // Trigger download via direct link (browser handles filename)
+                    window.location.href = result.download_url;
+
+                    document.getElementById('upload-section').style.display = 'none';
+                    document.getElementById('success-state').style.display = 'block';
+                } else {
+                    showToast(result.error || 'Có lỗi xảy ra!');
+                }
+            } catch (e) {
+                showToast('Lỗi kết nối: ' + e.message);
+            } finally {
+                btnEdit.disabled = false;
+                btnEdit.innerHTML = '✨ Sửa Ngày Tháng';
+            }
+        }
+
+        function resetAll() {
+            selectedFile = null;
+            fileInput.value = '';
+            fileNameEl.style.display = 'none';
+            dropZone.classList.remove('has-file');
+            previewSection.style.display = 'none';
+            datePreview.style.display = 'none';
+            dateInputsSection.style.display = 'none';
+            loading.style.display = 'none';
+            document.getElementById('upload-section').style.display = 'block';
+            document.getElementById('success-state').style.display = 'none';
+            container.classList.remove('expanded');
+            document.getElementById('new-day').value = '';
+            document.getElementById('new-month').value = '';
+            document.getElementById('new-year').value = '';
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+    </script>
+</body>
+</html>
