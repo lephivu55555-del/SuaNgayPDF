@@ -267,21 +267,31 @@
                 }
 
                 if (result.success) {
-                    // Date found
-                    document.getElementById('original-date').textContent =
-                        `ngày ${result.day} tháng ${result.month} năm ${result.year}`;
-                    document.getElementById('detection-method').textContent =
-                        result.method === 'ocr' ? 'Phát hiện bằng OCR' : 'Phát hiện từ text PDF';
+                    // Date found (or manual mode)
+                    if (result.day && result.month && result.year) {
+                        document.getElementById('original-date').textContent =
+                            `ngày ${result.day} tháng ${result.month} năm ${result.year}`;
+                        document.getElementById('detection-method').textContent =
+                            result.method === 'ocr' ? 'Phát hiện bằng OCR' : 'Phát hiện từ text PDF';
+                    } else {
+                        document.getElementById('original-date').textContent =
+                            'File scan — nhập ngày tháng MỚI bên dưới';
+                        document.getElementById('detection-method').textContent = 'Nhập thủ công';
+                    }
                     datePreview.style.display = 'block';
 
-                    document.getElementById('new-day').value = result.day;
-                    document.getElementById('new-month').value = result.month;
-                    document.getElementById('new-year').value = result.year;
+                    document.getElementById('new-day').value = result.day || '';
+                    document.getElementById('new-month').value = result.month || '';
+                    document.getElementById('new-year').value = result.year || '';
                     dateInputsSection.style.display = 'block';
+                    
+                    if (result.manual_mode) {
+                        showToast('File scan - vui lòng nhập ngày tháng mới bên dưới');
+                    }
                 } else if (result.manual_mode) {
-                    // Manual mode - let user enter values
+                    // Legacy manual mode with error
                     dateInputsSection.style.display = 'block';
-                    showToast(result.error);
+                    showToast(result.error || 'Vui lòng nhập ngày tháng thủ công');
                 } else {
                     showToast(result.error || 'Lỗi không xác định');
                 }

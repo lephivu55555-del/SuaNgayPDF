@@ -240,27 +240,18 @@ def api_preview():
                 "method": text_result['method'],
             })
         
-        # Fallback: OCR (use lower DPI + crop for memory efficiency)
-        ocr_img = pdf_page_to_image(doc, page_num=0, dpi=150, crop_top_ratio=0.35)
-        ocr_result, _ = ocr_find_date(ocr_img)
+        # If text extraction fails, show preview with manual input mode
+        # (No OCR here — too heavy for free-tier hosting)
         doc.close()
-        
-        if ocr_result:
-            return jsonify({
-                "success": True,
-                "preview": preview_b64,
-                "day": ocr_result['day'],
-                "month": ocr_result['month'],
-                "year": ocr_result['year'],
-                "method": "ocr",
-            })
-        else:
-            return jsonify({
-                "success": False,
-                "preview": preview_b64,
-                "error": "Không tìm thấy ngày tháng tự động. Vui lòng nhập thủ công.",
-                "manual_mode": True,
-            })
+        return jsonify({
+            "success": True,
+            "preview": preview_b64,
+            "day": "",
+            "month": "",
+            "year": "",
+            "method": "manual",
+            "manual_mode": True,
+        })
     except Exception as e:
         return jsonify({"success": False, "error": f"Lỗi: {str(e)}"})
 
